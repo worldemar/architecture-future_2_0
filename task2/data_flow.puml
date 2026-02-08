@@ -1,0 +1,61 @@
+@startuml
+
+!theme carbon-gray
+!include <C4/C4_Container>
+!include ../doc/common/theme.iuml
+
+title Data Flow Diagram - Потоки данных между доменами
+
+Boundary(medical_domain, "Medical Core Domain") {
+    Container(med_core, "Medical Core System", "Java/Net", "Управление пациентами и визитами")
+    ContainerDb(med_db, "Operational DB (Medical)", "PostgreSQL", "Хранение медицинских данных")
+}
+
+Boundary(fintech_domain, "Fintech Domain") {
+    Container(bank_sys, "Banking System", "Go/Java", "Биллинг, счета, платежи")
+    ContainerDb(fin_db, "Operational DB (Financial)", "PostgreSQL", "Хранение финансовых транзакций")
+}
+
+Boundary(ai_domain, "AI Domain") {
+    Container(ai_svc, "AI Inference Service", "Python", "Анализ снимков и диагностика")
+}
+
+Boundary(partner_domain, "Partner Domain") {
+    Container(partner_gw, "Partner API Gateway", "Kong/Nginx", "Точка входа для партнеров")
+    System_Ext(partners, "Pharma & Electronics", "Внешние системы партнеров")
+}
+
+Boundary(data_domain, "Data Platform Domain") {
+    ContainerQueue(kafka, "Event Bus", "Apache Kafka", "Шина событий и данных")
+    ContainerDb(data_lake, "Data Lake", "S3", "Сырые данные и архивы")
+    ContainerDb(clickhouse, "Analytical DWH", "ClickHouse", "Быстрая аналитика")
+    Container(bi, "BI Portal (Self-Service)", "Superset", "Витрина данных и отчеты")
+}
+
+' Operational Internal Flows
+Rel(med_core, med_db, "R/W", "JDBC")
+Rel_D(bank_sys, fin_db, "R/W", "JDBC")
+
+' Event Streaming (CDC / Events)
+Rel_R(med_db, kafka, "1. CDC / Medical Events (Anonymized)", "Debezium")
+Rel_R(fin_db, kafka, "2. CDC / Financial Events", "Debezium")
+Rel(partner_gw, kafka, "3. Supply Chain Events", "TCP")
+
+' AI Flows
+Rel_D(kafka, ai_svc, "4. Request Analysis", "Consumer")
+Rel_U(ai_svc, kafka, "5. Diagnostic Result", "Producer")
+Rel_L(kafka, med_core, "6. Show Result to Doctor", "Consumer")
+
+' Analytics Flows (ETL/ELT)
+Rel(kafka, data_lake, "7. Ingest Raw Data", "Sink")
+Rel(data_lake, clickhouse, "8. Transform & Aggregate", "ETL")
+Rel(clickhouse, bi, "9. Query Data for Reports", "SQL")
+
+' Cross-Domain Business Flows
+Rel_R(med_core, kafka, "10. Billable Event (Service Done)", "Producer")
+Rel_L(kafka, bank_sys, "11. Create Invoice", "Consumer")
+
+' Partner Flows
+Rel(partners, partner_gw, "API Calls", "HTTPS")
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+skinparam componentStyle uml2
+
+actor "DevOps Engineer" as User
+
+package "Manual Prerequisites" {
+    component "Yandex Cloud Account" as Account
+    component "Service Account & Keys" as SA
+    component "SSH Key Pair" as SSH
+}
+
+package "Yandex Cloud Infrastructure" {
+    [Terraform] as TF <<Automation>>
+    
+    node "VPC Network" as VPC {
+        package "Subnet A" as Subnet {
+            node "App VM" as AppVM {
+                component "OS (Ubuntu)" as AppOS
+                component "BI Software" as AppSoft #pink
+            }
+            
+            node "DB VM" as DbVM {
+                component "OS (Ubuntu)" as DbOS
+                database "Data Disk" as Disk
+                component "ClickHouse" as DbSoft #pink
+            }
+        }
+    }
+}
+
+User ..> Account : creates
+User ..> SA : creates
+User ..> SSH : generates
+User ..> TF : runs (apply)
+User ..> AppSoft : installs/configures (Manual/Ansible)
+User ..> DbSoft : installs/configures (Manual/Ansible)
+
+TF ..> VPC : manages
+TF ..> Subnet : manages
+TF ..> AppVM : manages
+TF ..> DbVM : manages
+TF ..> Disk : manages
+
+legend right
+  | Color | Type |
+  | <#white> | Terraform Managed |
+  | <#pink> | Manual / Configuration Management |
+endlegend
+
+@enduml

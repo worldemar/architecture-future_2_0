@@ -1,0 +1,113 @@
+@startuml
+
+!theme carbon-gray
+!include <C4/C4_Container>
+!include ../doc/common/theme.iuml
+
+SHOW_PERSON_OUTLINE()
+
+title Диаграмма Контейнеров - «Будущего 2.0» Целевая Архитектура (год)
+
+Person(doctor, "Врач/Оператор", "Работает с пациентами")
+Person(manager, "Менеджер", "Принимает управленческие решения")
+Person(partner, "Партнер", "Фарма/Электроника")
+
+System_Boundary(c1, "Future 2.0 Cloud Platform") {
+    Container(api_gateway, "API Gateway", "Nginx/Kong", "Единая точка входа, маршрутизация, rate limiting")
+    Container(web_app, "Web Portal (Self-Service)", "React/SPA", "Единый интерфейс для сотрудников и аналитики")
+    Container(idp, "Identity Provider", "Keycloak", "SSO, Аутентификация и Авторизация")
+
+    Container(legacy_app, "Legacy App", "PowerBuilder", "Старый интерфейс оператора (постепенный вывод)")
+    
+    Boundary(domain_fintech, "Fintech Domain") {
+        Container(fintech_service, "Fintech Services", "Go/Java", "Платежи, счета, кредиты")
+        ContainerDb(fintech_db, "Fintech DB", "PostgreSQL", "Операционные данные финтеха")
+        Note top of fintech_service
+          <b>Сценарий: Независимое развитие</b>
+          Микросервисы Финтеха
+          деплоятся отдельно
+          от Медицины и Legacy
+        End Note
+    }
+
+
+    Boundary(domain_ai, "AI Domain") {
+        Container(ai_service, "AI Services", "Python", "Анализ снимков, диагностика")
+        ContainerDb(ai_db, "AI DB", "PostgreSQL/Mongo", "Метаданные моделей")
+    }
+
+    Boundary(domain_medical, "Medical Core Domain") {
+        Container(med_service, "Medical Services", "Java/Go", "Новая логика работы с пациентами")
+    }
+
+    Boundary(domain_legacy, "Legacy Domain") {
+        ContainerDb(legacy_dwh, "Legacy DWH", "SQL Server 2008", "Исторические данные, старая логика")
+    }
+
+    Boundary(domain_data, "Data Platform (Analytics)") {
+        Container(kafka, "Event Bus", "Apache Kafka", "Шина данных, асинхронный обмен")
+        Container(cdc, "CDC Connector", "Debezium", "Захват изменений из Legacy DWH")
+        Container(etl, "ETL/Stream Processors", "Kafka Streams/Spark", "Трансформация, обогащение и маскирование PII")
+        
+        Note right of cdc
+             <b>Privacy & Compliance</b>
+             Фильтрация/Маскирование
+             медицинских данных (PII)
+             перед отправкой в аналитику
+        End Note
+        
+        ContainerDb(data_lake, "Data Lake", "S3 Object Storage", "Сырые данные, архивы, неструктурированные данные")
+        ContainerDb(clickhouse, "Analytical DB", "ClickHouse", "Быстрые витрины данных")
+        Container(bi_tool, "BI Tool", "Superset/Metabase", "Визуализация и конструктор отчетов")
+
+        Note right of clickhouse
+          <b>Сценарий: Быстрая отчетность</b>
+          ClickHouse обеспечивает
+          суб-секундные ответы
+          на больших объемах
+        End Note
+
+        Note right of kafka
+          <b>Сценарий: Масштабирование</b>
+          Kafka позволяет подключать
+          новых партнеров и сервисы
+          через подписку на события
+        End Note
+    }
+}
+
+' Relationships
+Rel(doctor, web_app, "Использует", "HTTPS")
+Rel(manager, web_app, "Смотрит отчеты", "HTTPS")
+Rel(doctor, legacy_app, "Использует (Legacy)", "TCP")
+Rel(partner, api_gateway, "Интеграция API", "HTTPS")
+Lay_R(partner, manager)
+
+Rel(web_app, api_gateway, "API Calls", "HTTPS")
+Rel(web_app, idp, "Auth", "OIDC")
+Rel_R(api_gateway, idp, "Validate Token")
+
+Rel(api_gateway, fintech_service, "Proxies", "gRPC/REST")
+Rel(api_gateway, ai_service, "Proxies", "gRPC/REST")
+Rel(api_gateway, med_service, "Proxies", "gRPC/REST")
+Rel(api_gateway, bi_tool, "Proxies", "HTTPS")
+
+Rel(legacy_app, legacy_dwh, "R/W", "TDS")
+
+' Data Flow & Integration
+Rel(fintech_service, fintech_db, "R/W", "TCP")
+Rel(ai_service, ai_db, "R/W", "TCP")
+
+Rel(fintech_service, kafka, "Publishes Events", "TCP")
+Rel(ai_service, kafka, "Publishes Events", "TCP")
+Rel(med_service, kafka, "Publishes Events", "TCP")
+
+Rel(legacy_dwh, cdc, "Replication Log")
+Rel(cdc, kafka, "CDC Events")
+
+Rel_U(kafka, data_lake, "Sink Raw Data")
+Rel_R(kafka, etl, "Stream")
+Rel(etl, clickhouse, "Write Aggregates")
+Rel_R(bi_tool, clickhouse, "SQL Queries", "TCP")
+
+@enduml

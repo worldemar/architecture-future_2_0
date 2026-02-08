@@ -1,0 +1,5 @@
+cloud_id  = "cloud.id.from.top.of.control.panel"
+folder_id = "folder.id.from.top.of.control.panel"
+zone      = "ru-central1-a"
+image_id  = "image.id"
+ssh_public_key = "path.to.key.pub"
