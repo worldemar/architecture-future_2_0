@@ -1,0 +1,29 @@
+@startuml
+
+!theme carbon-gray
+!include <C4/C4_Context>
+!include common/theme.iuml
+
+SHOW_PERSON_OUTLINE()
+
+title Потоки данных в компании «Будущего 2.0»
+
+System(operator, "Клиентский\nинтерфейс\nоператора")
+System(bi, "BI-система")
+System(dwh, "DWH")
+System(ai, "ИИ-сервисы")
+System(integration, "Интеграционная шина")
+System(fintech, "Финтех-сервисы")
+System(internal, "Внутренние\nсервисы")
+
+Rel_D(operator, dwh, "Медицинские данные и снимки")
+Rel_R(dwh, bi, "Данные")
+BiRel_D(dwh, integration, "")
+BiRel_L(integration, ai, "Медицинские данные")
+BiRel_R(integration, fintech, "Финансовые\nданные")
+Rel_D(integration, internal, "Внутренние финансовые\nданные, управление\nклиниками и т.д.")
+
+SHOW_LEGEND()
+
+@enduml
+
