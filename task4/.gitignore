@@ -1,0 +1,14 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# .tfvars likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# SSH keys
+*.pub
+*.pem
