@@ -33,14 +33,14 @@ resource "yandex_compute_instance" "app_vm" {
   zone = var.zone
 
   resources {
-    cores  = 2
-    memory = 4
+    cores  = var.app_vm_cores
+    memory = var.app_vm_memory
   }
 
   boot_disk {
     initialize_params {
       image_id = var.image_id
-      size     = 20
+      size     = var.app_disk_size
     }
   }
 
@@ -60,14 +60,14 @@ resource "yandex_compute_instance" "db_vm" {
   zone = var.zone
 
   resources {
-    cores  = 4
-    memory = 8
+    cores  = var.db_vm_cores
+    memory = var.db_vm_memory
   }
 
   boot_disk {
     initialize_params {
       image_id = var.image_id
-      size     = 30
+      size     = var.db_disk_size
     }
   }
 
@@ -90,5 +90,5 @@ resource "yandex_compute_disk" "db_data_disk" {
   name = "db-data-disk"
   type = "network-hdd"
   zone = var.zone
-  size = 100 # 100 GB for data
+  size = var.db_data_disk_size
 }
